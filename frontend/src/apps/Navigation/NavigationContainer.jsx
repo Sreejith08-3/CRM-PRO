@@ -132,12 +132,12 @@ function Sidebar({ collapsible, isMobile = false }) {
       style={{
         overflow: 'hidden',
         height: '100vh',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
+        position: isMobile ? 'relative' : 'fixed',
+        left: isMobile ? 'auto' : 0,
+        top: isMobile ? 'auto' : 0,
+        bottom: isMobile ? 'auto' : 0,
         zIndex: 1000,
-        boxShadow: '2px 0 8px rgba(0,0,0,0.15)',
+        boxShadow: isMobile ? 'none' : '2px 0 8px rgba(0,0,0,0.15)',
         background: '#ffffff', // Ensure solid background for visibility
       }}
       theme={'light'}

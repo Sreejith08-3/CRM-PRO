@@ -64,5 +64,5 @@ export default function useResponsive() {
       }
     };
   }, []);
-  return { screenSize: state, isMobile: !state.md };
+  return { screenSize: state, isMobile: !state.lg };
 }
