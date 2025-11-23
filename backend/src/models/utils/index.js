@@ -1,49 +1,40 @@
-const { basename, extname } = require('path');
-const { globSync } = require('glob');
+// Hardcoded model lists for Vercel compatibility
+// This avoids using globSync which fails in serverless environments
 
-const appModelsFiles = globSync('./src/models/appModels/**/*.js');
+const modelsFiles = [
+  'Admin',
+  'AdminPassword',
+  'Setting',
+  'Upload',
+  'Client',
+  'Invoice',
+  'Payment',
+  'PaymentMode',
+  'Quote',
+  'Taxes'
+];
 
-const pattern = './src/models/**/*.js';
+const appModelsList = [
+  'Client',
+  'Invoice',
+  'Payment',
+  'PaymentMode',
+  'Quote',
+  'Taxes'
+];
 
-const modelsFiles = globSync(pattern).map((filePath) => {
-  const fileNameWithExtension = basename(filePath);
-  const fileNameWithoutExtension = fileNameWithExtension.replace(
-    extname(fileNameWithExtension),
-    ''
-  );
-  return fileNameWithoutExtension;
+const entityList = appModelsList.map(model => model.toLowerCase());
+
+const routesList = appModelsList.map(modelName => {
+  const firstChar = modelName.charAt(0);
+  const fileNameLowerCaseFirstChar = modelName.replace(firstChar, firstChar.toLowerCase());
+  return {
+    entity: modelName.toLowerCase(),
+    modelName: modelName,
+    controllerName: fileNameLowerCaseFirstChar + 'Controller',
+  };
 });
 
-const constrollersList = [];
-const appModelsList = [];
-const entityList = [];
-const routesList = [];
-
-for (const filePath of appModelsFiles) {
-  const fileNameWithExtension = basename(filePath);
-  const fileNameWithoutExtension = fileNameWithExtension.replace(
-    extname(fileNameWithExtension),
-    ''
-  );
-  const firstChar = fileNameWithoutExtension.charAt(0);
-  const modelName = fileNameWithoutExtension.replace(firstChar, firstChar.toUpperCase());
-  const fileNameLowerCaseFirstChar = fileNameWithoutExtension.replace(
-    firstChar,
-    firstChar.toLowerCase()
-  );
-  const entity = fileNameWithoutExtension.toLowerCase();
-
-  controllerName = fileNameLowerCaseFirstChar + 'Controller';
-  constrollersList.push(controllerName);
-  appModelsList.push(modelName);
-  entityList.push(entity);
-
-  const route = {
-    entity: entity,
-    modelName: modelName,
-    controllerName: controllerName,
-  };
-  routesList.push(route);
-}
+const constrollersList = routesList.map(r => r.controllerName);
 
 module.exports = { constrollersList, appModelsList, modelsFiles, entityList, routesList };
