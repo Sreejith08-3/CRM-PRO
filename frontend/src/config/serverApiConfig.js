@@ -6,7 +6,7 @@ const VITE_BASE = (typeof import.meta !== 'undefined' && import.meta.env && impo
 
 const VITE_API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE)
   ? String(import.meta.env.VITE_API_BASE)
-  : 'http://localhost:8888'; // <- fallback backend host:port
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:8888');
 
 export const BASE_URL = VITE_BASE.replace(/\/$/, '');
 export const API_BASE_URL = VITE_API_BASE.replace(/\/$/, '');
