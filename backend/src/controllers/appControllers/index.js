@@ -1,30 +1,26 @@
-const createCRUDController = require('@/controllers/middlewaresControllers/createCRUDController');
-const { routesList } = require('@/models/utils');
-
-const { globSync } = require('glob');
-const path = require('path');
-
-const pattern = './src/controllers/appControllers/*/**/';
-const controllerDirectories = globSync(pattern).map((filePath) => {
-  return path.basename(filePath);
-});
+const createCRUDController = require('../middlewaresControllers/createCRUDController');
+const { routesList } = require('../../models/utils');
 
 const appControllers = () => {
   const controllers = {};
   const hasCustomControllers = [];
 
-  controllerDirectories.forEach((controllerName) => {
-    try {
-      const customController = require('@/controllers/appControllers/' + controllerName);
+  // Explicitly load custom controllers to ensure Vercel bundles them
+  const customControllersList = {
+    clientController: require('./clientController'),
+    invoiceController: require('./invoiceController'),
+    paymentController: require('./paymentController'),
+    paymentModeController: require('./paymentModeController'),
+    quoteController: require('./quoteController'),
+    taxesController: require('./taxesController'),
+  };
 
-      if (customController) {
-        hasCustomControllers.push(controllerName);
-        controllers[controllerName] = customController;
-      }
-    } catch (err) {
-      throw new Error(err.message);
+  for (const [controllerName, controller] of Object.entries(customControllersList)) {
+    if (controller) {
+      hasCustomControllers.push(controllerName);
+      controllers[controllerName] = controller;
     }
-  });
+  }
 
   routesList.forEach(({ modelName, controllerName }) => {
     if (!hasCustomControllers.includes(controllerName)) {
