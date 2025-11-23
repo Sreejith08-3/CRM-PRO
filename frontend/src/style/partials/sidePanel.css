@@ -1,0 +1,11 @@
+.sidePanel {
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  box-shadow: var(--box-shadow-sm);
+}
+
+.sidePanelContent {
+  transition: all 0.3s ease-in-out;
+  margin-top: 0;
+}

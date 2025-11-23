@@ -1,0 +1,65 @@
+.notification::-webkit-scrollbar {
+  width: 4px;
+  height: 60px;
+}
+
+.notification::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+.headerIcon {
+  position: relative;
+}
+
+.headerIcon.ant-avatar {
+  float: right;
+  margin-left: 10px;
+  margin-top: 15px;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.headerIcon.ant-avatar:hover {
+  background: var(--bg-container);
+  color: var(--primary-color);
+  box-shadow: var(--box-shadow-md);
+  cursor: pointer;
+  transform: translateY(-2px);
+}
+
+.headerIcon .last {
+  margin-right: 30px;
+}
+
+.profileDropdown {
+  display: flex;
+  min-width: 200px;
+  padding: 10px;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: var(--border-radius-base);
+}
+
+.profileDropdown:hover {
+  background-color: #f1f5f9;
+}
+
+.profileDropdownInfo {
+  float: left;
+  display: inline;
+  padding-left: 15px;
+}
+
+.profileDropdownInfo p {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.profileDropdownInfo p:last-child {
+  color: var(--text-secondary);
+  font-size: 12px;
+}

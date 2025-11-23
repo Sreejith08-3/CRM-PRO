@@ -1,0 +1,148 @@
+// backend/src/app.js
+const express = require('express');
+
+const cors = require('cors');
+const compression = require('compression');
+
+const cookieParser = require('cookie-parser');
+
+const coreAuthRouter = require('./routes/coreRoutes/coreAuth');
+const coreApiRouter = require('./routes/coreRoutes/coreApi');
+const coreDownloadRouter = require('./routes/coreRoutes/coreDownloadRouter');
+const corePublicRouter = require('./routes/coreRoutes/corePublicRouter');
+const adminAuth = require('./controllers/coreControllers/adminAuth');
+
+const errorHandlers = require('./handlers/errorHandlers');
+const erpApiRouter = require('./routes/appRoutes/appApi');
+
+const fileUpload = require('express-fileupload');
+const mongoose = require('mongoose'); // single mongoose require
+
+// create our Express app
+const app = express();
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(compression());
+
+// // default options
+// app.use(fileUpload());
+
+// ---- Get the Admin/User model from mongoose (models are preloaded by server.js) ----
+let AdminModel = null;
+try {
+  AdminModel = mongoose.model('Admin'); // common name
+} catch (e) {
+  // try to pick a likely model from registered models
+  const registered = typeof mongoose.modelNames === 'function' ? mongoose.modelNames() : [];
+  const foundName = registered.find((n) => /admin|user/i.test(n));
+  if (foundName) {
+    try {
+      AdminModel = mongoose.model(foundName);
+      console.warn(`Using alternative model name for registration: ${foundName}`);
+    } catch (errInner) {
+      console.error('Could not load model by foundName:', foundName, errInner);
+      AdminModel = null;
+    }
+  } else {
+    console.error('Admin model not found. Registered Mongoose models:', registered);
+    AdminModel = null;
+  }
+}
+
+// ---------- Adaptive public registration route ----------
+const bcrypt = require('bcryptjs');
+
+app.post('/api/register', async (req, res) => {
+  try {
+    if (!AdminModel) {
+      return res.status(500).json({ success: false, message: 'Server misconfiguration: user model not available' });
+    }
+
+    const { name, email, password, company, country } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password required' });
+    }
+
+    const emailNorm = String(email).toLowerCase().trim();
+
+    // Check duplicate
+    const existing = await AdminModel.findOne({ email: emailNorm });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Email already registered' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    // Decide what to set for role (if schema has role enum)
+    let roleToSet = undefined;
+    const rolePath = AdminModel.schema && AdminModel.schema.path && AdminModel.schema.path('role');
+    if (rolePath && Array.isArray(rolePath.enumValues) && rolePath.enumValues.length > 0) {
+      if (rolePath.enumValues.includes('user')) {
+        roleToSet = 'user';
+      } else {
+        const nonAdmin = rolePath.enumValues.find((v) => !/admin|super|root/i.test(v));
+        roleToSet = nonAdmin || rolePath.enumValues[0];
+      }
+    }
+
+    // Determine if schema has isAdmin boolean path
+    const hasIsAdmin = !!(AdminModel.schema && AdminModel.schema.path && AdminModel.schema.path('isAdmin'));
+
+    // Build new user object only with fields schema cares about (avoid invalid enum)
+    const newUserData = {
+      name: name || 'User',
+      email: emailNorm,
+      password: hash,
+      company: company || '',
+      country: country || '',
+      createdAt: new Date(),
+    };
+    if (roleToSet !== undefined) newUserData.role = roleToSet;
+    if (hasIsAdmin) newUserData.isAdmin = false;
+
+    const newUser = new AdminModel(newUserData);
+    await newUser.save();
+
+    const safeUser = newUser.toObject();
+    delete safeUser.password;
+
+    return res.status(201).json({ success: true, message: 'Registered', result: safeUser });
+  } catch (err) {
+    console.error('Public register error:', err);
+    if (err && err.name === 'ValidationError') {
+      const firstKey = Object.keys(err.errors || {})[0];
+      const firstMsg = firstKey ? err.errors[firstKey].message : err.message;
+      return res.status(400).json({ success: false, message: 'Validation error', error: firstMsg });
+    }
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+});
+// ---------- End Adaptive registration route ----------
+
+/* Here our API Routes */
+app.use('/api', coreAuthRouter);
+app.use('/api', adminAuth.isValidAuthToken, coreApiRouter);
+app.use('/api', adminAuth.isValidAuthToken, erpApiRouter);
+app.use('/download', coreDownloadRouter);
+app.use('/public', corePublicRouter);
+
+// If that above routes didnt work, we 404 them and forward to error handler
+app.use(errorHandlers.notFound);
+
+// production error handler
+app.use(errorHandlers.productionErrors);
+
+// done! we export it so we can start the site in start.js
+module.exports = app;
