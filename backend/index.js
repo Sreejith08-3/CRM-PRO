@@ -1,6 +1,18 @@
-require('module-alias/register');
+const path = require('path');
+const moduleAlias = require('module-alias');
+
+// Register alias programmatically for Vercel
+moduleAlias.addAlias('@', path.join(__dirname, 'src'));
+
 const mongoose = require('mongoose');
 require('dotenv').config();
+
+// Force include middleware to ensure Vercel bundles it
+try {
+  require('./src/controllers/middlewaresControllers/createAuthMiddleware');
+} catch (e) {
+  console.log('Middleware preload check');
+}
 
 // Connect to MongoDB
 if (!mongoose.connection.readyState) {
