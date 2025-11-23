@@ -1,22 +1,28 @@
 require('module-alias/register');
 const mongoose = require('mongoose');
-const { globSync } = require('glob');
-const path = require('path');
 require('dotenv').config();
 
 // Connect to MongoDB
-// In serverless, global connection state is preserved across hot invocations
 if (!mongoose.connection.readyState) {
-  mongoose.connect(process.env.DATABASE).catch(err => console.error('MongoDB connection error:', err));
+  mongoose.connect(process.env.DATABASE)
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.error('MongoDB connection error:', err));
 }
 
-// Load all models
-// We use __dirname to ensure we look in the right place regardless of CWD
-const modelsFiles = globSync('./src/models/**/*.js', { cwd: __dirname });
+// Explicitly load models to ensure they are registered in Vercel environment
+// Core Models
+require('./src/models/coreModels/Admin');
+require('./src/models/coreModels/AdminPassword');
+require('./src/models/coreModels/Setting');
+require('./src/models/coreModels/Upload');
 
-for (const filePath of modelsFiles) {
-  require(path.join(__dirname, filePath));
-}
+// App Models
+require('./src/models/appModels/Client');
+require('./src/models/appModels/Invoice');
+require('./src/models/appModels/Payment');
+require('./src/models/appModels/PaymentMode');
+require('./src/models/appModels/Quote');
+require('./src/models/appModels/Taxes');
 
 // Import the Express app
 const app = require('./src/app');
