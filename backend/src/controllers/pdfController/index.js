@@ -93,7 +93,8 @@ exports.generatePdf = async (
     settings.public_server_file = settings.public_server_file || process.env.PUBLIC_SERVER_FILE || '';
 
     // Render the HTML using the Pug template
-    const templatePath = path.resolve('src/pdf', `${modelName}.pug`);
+    // Render the HTML using the Pug template
+    const templatePath = path.join(__dirname, '../../pdf', `${modelName}.pug`);
     if (!fs.existsSync(templatePath)) {
       const err = new Error(`Pug template not found: ${templatePath}`);
       if (callback) return callback(err);
