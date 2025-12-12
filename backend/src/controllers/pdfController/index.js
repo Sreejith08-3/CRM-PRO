@@ -1,15 +1,18 @@
 // backend/src/controllers/pdfController/index.js
-// Robust PDF generation based on pug templates.
+// Robust PDF generation based on pug templates using Puppeteer.
 // Ensures output directory exists, sets public file path default, and reports errors clearly.
 
 const pug = require('pug');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
-let pdf = require('html-pdf'); // existing dependency in your project
 const { loadSettings } = require('@/middlewares/settings');
 const useLanguage = require('@/locale/useLanguage');
 const { useMoney, useDate } = require('@/settings');
+
+// Puppeteer dependencies
+const puppeteerCore = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 const pugFiles = ['invoice', 'offer', 'quote', 'payment'];
 
@@ -93,7 +96,6 @@ exports.generatePdf = async (
     settings.public_server_file = settings.public_server_file || process.env.PUBLIC_SERVER_FILE || '';
 
     // Render the HTML using the Pug template
-    // Render the HTML using the Pug template
     const templatePath = path.join(__dirname, '../../pdf', `${modelName}.pug`);
     if (!fs.existsSync(templatePath)) {
       const err = new Error(`Pug template not found: ${templatePath}`);
@@ -110,21 +112,41 @@ exports.generatePdf = async (
       moment,
     });
 
-    // Create PDF (html-pdf)
-    pdf
-      .create(htmlContent, {
+    // Launch Puppeteer
+    let browser;
+    try {
+      if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+        // Production (Vercel/AWS Lambda)
+        browser = await puppeteerCore.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        });
+      } else {
+        // Local Development
+        const puppeteer = require('puppeteer');
+        browser = await puppeteer.launch({
+          headless: 'new',
+        });
+      }
+
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      await page.pdf({
+        path: targetLocation,
         format: format,
-        orientation: 'portrait',
-        border: '10mm',
-      })
-      .toFile(targetLocation, function (error, res) {
-        if (error) {
-          console.error('PDF creation failed:', error);
-          if (callback) return callback(error);
-          return;
-        }
-        if (callback) return callback(null, res);
+        printBackground: true,
       });
+
+      await browser.close();
+
+      if (callback) return callback(null, { filename: info.filename });
+    } catch (error) {
+      if (browser) await browser.close();
+      throw error;
+    }
+
   } catch (error) {
     console.error('generatePdf error:', error);
     if (callback) return callback(error);
