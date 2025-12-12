@@ -1,6 +1,7 @@
 const custom = require('@/controllers/pdfController');
 const mongoose = require('mongoose');
 const path = require('path');
+const os = require('os');
 
 module.exports = downloadPdf = async (req, res, { directory, id }) => {
   try {
@@ -20,7 +21,7 @@ module.exports = downloadPdf = async (req, res, { directory, id }) => {
 
       const fileId = modelName.toLowerCase() + '-' + result._id + '.pdf';
       const folderPath = modelName.toLowerCase();
-      const targetLocation = path.join('src', 'public', 'download', folderPath, fileId);
+      const targetLocation = path.join(os.tmpdir(), folderPath, fileId);
       await custom.generatePdf(
         modelName,
         { filename: folderPath, format: 'A4', targetLocation },
